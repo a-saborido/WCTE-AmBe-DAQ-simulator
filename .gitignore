@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+*.root
+*.log
+*.out
+*.err
+
+simulation/logs/
+simulation/macs/
+simulation/output/
+simulation/output_*/
+daq_windows/output/
