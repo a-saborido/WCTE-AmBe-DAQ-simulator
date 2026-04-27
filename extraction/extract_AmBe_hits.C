@@ -8,7 +8,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <cctype>
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -139,26 +138,11 @@ static bool IsAmBePromptSourceTrack(const TrackInfo& tr)
 }
 
 // -----------------------------------------------------------------------------
-// Convert a string to lowercase so creator-process name matching is robust
-// against capitalisation differences such as "Capture" vs "nCapture".
-// -----------------------------------------------------------------------------
-static std::string ToLower(std::string s)
-{
-  std::transform(s.begin(), s.end(), s.begin(),
-                 [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-  return s;
-}
-
-// -----------------------------------------------------------------------------
-// Check whether a creator-process name corresponds to capture.
-//
-// Using a substring match allows names such as "capture" or "nCapture" to be
-// treated consistently.
+// Check whether a creator-process name corresponds to neutron capture.
 // -----------------------------------------------------------------------------
 static bool IsCaptureCreatorProcessName(const std::string& process_name)
 {
-  const std::string lower = ToLower(process_name);
-  return lower.find("capture") != std::string::npos;
+  return process_name == "nCapture";
 }
 
 // -----------------------------------------------------------------------------
