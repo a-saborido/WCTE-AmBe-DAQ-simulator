@@ -38,7 +38,7 @@ mc_root = Path(
 )
 
 bkg_root = Path(
-    "/scratch/saborido/AmBe_data/clean_bkg/"
+    "/scratch/saborido/WCTE-AmBe-data/clean_bkg/"
     "WCTE_AmBe_clean_bkg_pe.root"
 )
 
