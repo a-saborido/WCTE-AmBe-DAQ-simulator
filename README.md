@@ -1,6 +1,6 @@
 # WCTE AmBe DAQ simulator
 
-This repository contains the workflow used to generate, extract, and process realistic WCSim simulations of WCTE AmBe calibration data, taking into account the DAQ procedure.
+This repository contains the workflow used to generate, extract, and process realistic WCSim simulations of WCTE AmBe calibration data, taking into account the DAQ procedure, and enabling the production of labeled datasets for training machine learning models.
 
 The workflow has four main stages:
 
@@ -26,13 +26,18 @@ WCTE-AmBe-DAQ-simulator/
 │   └── inspect_AmBe_event.py
 └── daq_windows/
     ├── ambe_windows_truehits.ipynb
-    └── ambe_windows_digihits.ipynb
+    ├── ambe_windows_digihits.ipynb
+    ├── other_mpmt_info.dict
+    ├── wcsim_wcte_coordinate_transformation.py
+    ├── merge_SB.py
+    └── analysis_outputs.ipynb
+
 ```
 
 
 ## 1. WCSim setup
 
-The simulations were produced with **WCSim v1.12.29**:
+These simulations were tested with **WCSim v1.12.29**:
 
 - WCSim repository: <https://github.com/WCSim/WCSim>
 
@@ -45,7 +50,7 @@ In the file `macros/jobOptions.mac` of the WCSim installation, the following phy
 
 These settings are required for the AmBe production used here, in particular for neutron transport and capture modeling.
 
-The WCSim macro files specific to this AmBe setup are provided in this repository under `simulation/macros/`. These include the main simulation template, DAQ configuration, and detector tuning files used for the production.
+The WCSim macro files specific to this AmBe setup are provided in this repository under `simulation/macros/`. These include the main simulation template, DAQ configuration, and detector tuning files used for the WCSim production.
 
 
 ## 2. Parallel AmBe production
@@ -131,12 +136,26 @@ Two versions are provided:
 - **true-hit windows** from `TTrueHits`, in `daq_windows/ambe_windows_truehits.ipynb`
 - **digitized-hit windows** from `TDigiHits`, in `daq_windows/ambe_windows_digihits.ipynb`
 
-For the digitized-hit case, an additional PMT time-resolution effect can be applied so that nearby hits in the same tube are merged according to the detector time-resolution model.
+For the digitized-hit case, additional corrections are applied to make the simulated data closer to the real WCTE readout:
+- Some quantum-efficiency (QE) corrections are included, for which the information stored in `other_mpmt_info.dict` is required.
+- It accounts for the calibration procedure applied in real data: hits coming from PMTs without a valid calibration are removed from the dataset. Internal calibration data is not shared in this repository
+        
+To perform these corrections and selections consistently, the ID translation implemented in `wcsim_wcte_coordinate_transformation.py` is needed.
+
 
 The final windowed output can also be written back to a ROOT file with a format matching real WCTE data, together with the associated Monte Carlo truth information.
 
 
-## 6. Summary of the workflow
+## 6. Merge simulated readout windows with background measurement
+
+After generating the simulated readout windows, merge_SB.py can be used to merge them with real background data measured in WCTE. This produces a labeled signal-plus-background dataset, where difficult-to-simulate backgrounds are taken directly from data. An optional PMT time-resolution effect can also be applied, merging nearby hits in the same tube.
+
+## 7. Analysis
+
+The `analysis_outputs.ipynb` enables an inspection of the final result.
+
+
+## Summary of the workflow
 
 The generator workflow is:
 
@@ -144,6 +163,9 @@ The generator workflow is:
 2. Merge the output ROOT files with `hadd`.
 3. Extract a compact ROOT representation with hit-level and prompt/capture truth information using `extraction/extract_AmBe_hits.C`.
 4. Generate synthetic DAQ windows from the extracted events using the notebooks in `daq_windows/`.
+5. For digitized hits, apply the required QE corrections, PMT ID translation, and calibration-based PMT selection.
+6. Optionally merge the simulated windows with real WCTE background data using `daq_windows/merge_SB.py`.
+7. Inspect and validate the final output with `daq_windows/analysis_outputs.ipynb`.
 
 ---
 
@@ -157,3 +179,7 @@ The generator workflow is:
 - `extraction/inspect_AmBe_event.py` — utility to inspect WCSim event content
 - `daq_windows/ambe_windows_truehits.ipynb` — synthetic window generation starting from true hits
 - `daq_windows/ambe_windows_digihits.ipynb` — synthetic window generation starting from digitized hits
+* `daq_windows/other_mpmt_info.dict` — auxiliary mPMT information needed for digitized-hit QE corrections
+* `daq_windows/wcsim_wcte_coordinate_transformation.py` — PMT and mPMT ID translation utilities
+* `daq_windows/merge_SB.py` — script to merge simulated readout windows with measured WCTE background data
+* `daq_windows/analysis_outputs.ipynb` — notebook for basic validation and inspection of the final output

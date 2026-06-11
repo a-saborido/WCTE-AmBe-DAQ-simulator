@@ -11,4 +11,5 @@ simulation/logs/
 simulation/macs/
 simulation/output/
 simulation/output_*/
+simulation/macs_*/
 daq_windows/output/
