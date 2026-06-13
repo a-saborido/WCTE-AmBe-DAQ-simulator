@@ -28,7 +28,6 @@ WCTE-AmBe-DAQ-simulator/
     ├── ambe_windows_truehits.ipynb
     ├── ambe_windows_digihits.ipynb
     ├── other_mpmt_info.dict
-    ├── wcsim_wcte_coordinate_transformation.py
     ├── merge_SB.py
     └── analysis_outputs.ipynb
 
@@ -138,10 +137,9 @@ Two versions are provided:
 
 For the digitized-hit case, additional corrections are applied to make the simulated data closer to the real WCTE readout:
 - Some quantum-efficiency (QE) corrections are included, for which the information stored in `other_mpmt_info.dict` is required.
-- It accounts for the calibration procedure applied in real data: hits coming from PMTs without a valid calibration are removed from the dataset. Internal calibration data is not shared in this repository
-        
-To perform these corrections and selections consistently, the ID translation implemented in `wcsim_wcte_coordinate_transformation.py` is needed.
+- It accounts for the calibration procedure applied in real data: hits coming from PMTs without a valid calibration are removed from the dataset. Internal calibration data is not shared in this repository.
 
+To perform these corrections and selections consistently, a simple ID translation from WCSim to WCTE standards is implemented.
 
 The final windowed output can also be written back to a ROOT file with a format matching real WCTE data, together with the associated Monte Carlo truth information.
 
@@ -180,6 +178,5 @@ The generator workflow is:
 - `daq_windows/ambe_windows_truehits.ipynb` — synthetic window generation starting from true hits
 - `daq_windows/ambe_windows_digihits.ipynb` — synthetic window generation starting from digitized hits
 * `daq_windows/other_mpmt_info.dict` — auxiliary mPMT information needed for digitized-hit QE corrections
-* `daq_windows/wcsim_wcte_coordinate_transformation.py` — PMT and mPMT ID translation utilities
 * `daq_windows/merge_SB.py` — script to merge simulated readout windows with measured WCTE background data
 * `daq_windows/analysis_outputs.ipynb` — notebook for basic validation and inspection of the final output
