@@ -243,8 +243,8 @@ static bool DescendsFromPromptTrack(
 }
 
 void extract_AmBe_hits(
-    const char* infile = "../simulation/output/wcte_ambe_merged.root",   // change if needed
-    const char* outfile = "../simulation/output/wcte_ambe_merged_hits.root",
+    const char* infile = "../simulation/output/2386/wcte_ambe_000.root",   // change if needed
+    const char* outfile = "../simulation/output/2386/wcte_ambe_000_hits.root",
     const char* event_branch = "wcsimrootevent")
 {
   TFile* fin = TFile::Open(infile, "READ");

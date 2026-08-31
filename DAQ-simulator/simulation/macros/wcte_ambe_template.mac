@@ -70,7 +70,11 @@
 # Note that /WCSim/BGOPlacement *must* be set before /WCSim/Construct
 #
 # - BGO Position: Place the source in a different position using X, Y and Z coordinates
-/WCSim/BGOPosition 0 0.305 0 m
+#/WCSim/BGOPosition 0.0 0.305 0.0 m    ##2386
+#/WCSim/BGOPosition 0.0 -0.305 0.0 m    ##2387
+#/WCSim/BGOPosition 0.0 -0.585 0.0 m    ##2388
+#/WCSim/BGOPosition -0.4764 0.305 0.2917 m    ##2389
+/WCSim/BGOPosition -0.4764 -0.305 0.2917 m    ##2390
 
 # Needed for AmBe calibration:
 # - save neutron capture information
@@ -153,5 +157,5 @@
 
 /WCSim/random/seed SEED_PLACEHOLDER
 
-/run/beamOn 40000
+/run/beamOn 100000
 #exit

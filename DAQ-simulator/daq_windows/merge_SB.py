@@ -32,17 +32,16 @@ from tqdm.auto import tqdm
 # Paths
 # ------------------------------------------------------------
 
-mc_root = Path(
-    "/scratch/saborido/WCTE-AmBe-DAQ-simulator/daq_windows/output/"
-    "wcte_ambe_mc_digidata_0.root"
-)
+DAQ_WINDOWS_DIR = Path(__file__).resolve().parent
+
+mc_root = DAQ_WINDOWS_DIR / "output" / "wcte_ambe_mc_digidata_2390_TRAIN.root"
 
 bkg_root = Path(
     "/scratch/saborido/WCTE-AmBe-data/clean_bkg/"
     "WCTE_AmBe_clean_bkg_pe.root"
 )
 
-output_root = Path("output/wcte_ambe_mc_plus_clean_bkg_pe.root")
+output_root = DAQ_WINDOWS_DIR / "output" / "wcte_ambe_mc_plus_clean_bkg_pe_2390_TRAIN.root"
 output_root.parent.mkdir(parents=True, exist_ok=True)
 
 
@@ -52,6 +51,7 @@ output_root.parent.mkdir(parents=True, exist_ok=True)
 
 chunk_size = 2000
 require_same_n_windows = False
+windows_to_skip_in_bkg = 21630*4
 
 apply_resolution_after_merge = False
 resolution_ns = 20.0
@@ -82,6 +82,7 @@ wcte_branches = [
     "spill_counter",
     "event_number",
     "readout_number",
+    "window_data_quality",
 
     "trigger_types",
     "trigger_times",
@@ -116,7 +117,7 @@ wcte_branches = [
     "beamline_pmt_tdc_ids",
 
     "hit_pmt_calibrated_times",
-    "hit_pmt_has_time_constant",
+    "hit_pmt_readout_mask",
 ]
 
 # User-specified WCTE hit-level branches
@@ -128,7 +129,7 @@ wcte_hit_branches = [
     "hit_pmt_charges",
     "hit_pmt_times",
     "hit_pmt_calibrated_times",
-    "hit_pmt_has_time_constant",
+    "hit_pmt_readout_mask",
 ]
 
 wcte_dtypes = {
@@ -139,6 +140,7 @@ wcte_dtypes = {
     "spill_counter": np.int32,
     "event_number": np.int32,
     "readout_number": np.int32,
+    "window_data_quality": np.int32,
 
     "trigger_types": np.int32,
     "trigger_times": np.float64,
@@ -160,7 +162,7 @@ wcte_dtypes = {
     "hit_pmt_charges": np.float32,
     "hit_pmt_times": np.float64,
     "hit_pmt_calibrated_times": np.float64,
-    "hit_pmt_has_time_constant": np.int8,
+    "hit_pmt_readout_mask": np.int32,
 
     "pmt_waveform_mpmt_card_ids": np.int32,
     "pmt_waveform_pmt_channel_ids": np.int32,
@@ -667,9 +669,9 @@ def append_resolution_cluster(
                 np.asarray(wcte_hits[branch][cluster_idx], dtype=np.float64)
             )
 
-        elif branch == "hit_pmt_has_time_constant":
+        elif branch == "hit_pmt_readout_mask":
             value = np.max(
-                np.asarray(wcte_hits[branch][cluster_idx], dtype=np.int8)
+                np.asarray(wcte_hits[branch][cluster_idx], dtype=np.int32)
             )
 
         else:
@@ -1035,23 +1037,40 @@ with uproot.open(mc_root) as f_mc, uproot.open(bkg_root) as f_bkg:
 
     n_mc = mc_wcte_tree.num_entries
     n_bkg = bkg_wcte_tree.num_entries
+    n_bkg_available = n_bkg - windows_to_skip_in_bkg
 
     print()
     print("MC windows:         ", n_mc)
     print("Background windows: ", n_bkg)
+    print("BKG windows skipped:", windows_to_skip_in_bkg)
+    print("BKG windows usable: ", n_bkg_available)
     print("Resolution after merge:", apply_resolution_after_merge)
 
-    if require_same_n_windows and n_mc != n_bkg:
+    if windows_to_skip_in_bkg < 0:
+        raise RuntimeError("windows_to_skip_in_bkg must be >= 0.")
+
+    if windows_to_skip_in_bkg > n_bkg:
         raise RuntimeError(
-            f"Number of windows differs: MC has {n_mc}, background has {n_bkg}"
+            f"windows_to_skip_in_bkg={windows_to_skip_in_bkg} exceeds "
+            f"background windows={n_bkg}."
         )
 
-    n_merge = min(n_mc, n_bkg)
+    if require_same_n_windows and n_mc != n_bkg_available:
+        raise RuntimeError(
+            f"Number of windows differs: MC has {n_mc}, "
+            f"background has {n_bkg_available} after skipping "
+            f"{windows_to_skip_in_bkg}"
+        )
 
-    if n_mc != n_bkg:
+    n_merge = min(n_mc, n_bkg_available)
+
+    if n_mc != n_bkg_available:
         print()
         print("WARNING:")
-        print(f"  Number of windows differs: MC={n_mc}, background={n_bkg}")
+        print(
+            f"  Number of windows differs: MC={n_mc}, "
+            f"background usable={n_bkg_available}"
+        )
         print(f"  Merging only the first {n_merge} windows.")
 
     if n_merge == 0:
@@ -1096,6 +1115,8 @@ with uproot.open(mc_root) as f_mc, uproot.open(bkg_root) as f_bkg:
             )
         ):
             stop = min(start + chunk_size, n_merge)
+            bkg_start = start + windows_to_skip_in_bkg
+            bkg_stop = stop + windows_to_skip_in_bkg
 
             mc_wcte = mc_wcte_tree.arrays(
                 wcte_branches,
@@ -1113,16 +1134,16 @@ with uproot.open(mc_root) as f_mc, uproot.open(bkg_root) as f_bkg:
 
             bkg_wcte = bkg_wcte_tree.arrays(
                 wcte_hit_branches,
-                entry_start=start,
-                entry_stop=stop,
+                entry_start=bkg_start,
+                entry_stop=bkg_stop,
                 library="ak",
             )
 
             if len(bkg_ttrue_read_branches) > 0:
                 bkg_ttrue = bkg_ttrue_tree.arrays(
                     bkg_ttrue_read_branches,
-                    entry_start=start,
-                    entry_stop=stop,
+                    entry_start=bkg_start,
+                    entry_stop=bkg_stop,
                     library="ak",
                 )
             else:
